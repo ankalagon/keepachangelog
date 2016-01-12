@@ -8,26 +8,78 @@ class Changelog
      * Pattern to recognize tags
      * @var string
      */
-    private $_tagPattern = '';
+    private $_tagPattern = '[v]?[0-9]{1}.[0-9]{1}.?[0-9]{0,3}';
 
     /**
      * Available groups in changelog
      * @var array
      */
     private $_availableGroups = array(
-        'Added', // for new features.
         'Changed', // for changes in existing functionality.
+        'Added', // for new features.
         'Deprecated', // for once-stable features removed in upcoming releases.
         'Removed', // for deprecated features removed in this release.
         'Fixed', // for any bug fixes.
-        'Security' // to invite users to upgrade in case of vulnerabilities'
+        'Security', // to invite users to upgrade in case of vulnerabilities
+        'Merged', // for Merge requests
     );
+
+    private $_defaultGroupsPrefixes = array(
+        'Added' => array(
+            'Add',
+            'Added'
+        ),
+        'Deprecated' => array(
+            'Depracated'
+        ),
+        'Removed' => array(
+            'Remove',
+            'Deleted'
+        ),
+        'Fixed' => array(
+            'Fix',
+            'Hotfix',
+            'Bug',
+            'Quickfix'
+        ),
+        'Merged' => array(
+            'Merge'
+        )
+    );
+
+    /**
+     * Default Group
+     */
+    const defaultGroup = 'Changed';
 
     /**
      * Recognized groups in log
      * @var array
      */
     private $_groups = array();
+
+    /**
+     * If generate unreleased
+     * @var bool
+     */
+    private $_generateUnreleased = false;
+
+    /**
+     * Buffered output
+     * @var bool
+     */
+    private $_output = false;
+
+    /**
+     * Date format for release date
+     * @var string
+     */
+    private $_dateFormat = 'Y-m-d';
+
+    /**
+     * const
+     */
+    const HEAD = 'HEAD';
 
     /**
      * Create Changelog Object and set path to git reporitory
@@ -37,6 +89,12 @@ class Changelog
     {
         $this->_git = new \PHPGit\Git();
         $this->_git->setRepository($repository_path);
+        $this->setPrefixFor($this->_defaultGroupsPrefixes);
+    }
+
+    public function setGenerateUnreleased($generate = true)
+    {
+        $this->_generateUnreleased = (bool) $generate;
     }
 
     /**
@@ -46,6 +104,11 @@ class Changelog
     public function setTagPattern($pattern)
     {
         $this->_tagPattern = $pattern;
+    }
+
+    public function setDateFormatPattern($pattern)
+    {
+        $this->_dateFormat = $pattern;
     }
 
     /**
@@ -79,7 +142,7 @@ class Changelog
             if ($tag != $newTag) {
                 $log = $this->_git->log($tag.'..'.$newTag, '', array('limit' => 1000));
 
-                echo $this->_render(
+                $this->_output .= $this->_render(
                     $this->_getGroups($log),
                     $this->_getTime($log),
                     $newTag
@@ -88,6 +151,8 @@ class Changelog
 
             $newTag = $tag;
         }
+
+        return $this->_output;
     }
 
 
@@ -101,7 +166,12 @@ class Changelog
     private function _render(Array $groups, $date, $tag)
     {
         $str = '';
-        $str .= sprintf('## [%s] - %s', $tag, $date).PHP_EOL;
+
+        if ($tag == self::HEAD) {
+            $str .= sprintf('## [%s]', 'Unreleased').PHP_EOL;
+        } else {
+            $str .= sprintf('## [%s] - %s', $tag, $date).PHP_EOL;
+        }
 
         foreach ($groups as $group => $messages) {
             $str .= sprintf('### %s', $group).PHP_EOL;
@@ -133,7 +203,7 @@ class Changelog
             }
         }
 
-        return date('Y-m-d', $date);
+        return date($this->_dateFormat, $date);
     }
 
     /**
@@ -153,13 +223,17 @@ class Changelog
             throw new \Exception('Tag sorting error - invalid sorting');
         }
 
+        if ($this->_generateUnreleased) {
+            $this->_tags[] = 'HEAD';
+        }
+
         $this->_tags = array_reverse($this->_tags);
 
         return $this->_tags;
     }
 
     /**
-     * Recognize one of available groups in changelog message, default message logs to Changed group
+     * Recognize one of available groups in changelog message, default message logs to "Changed" group
      * @param  Array  $log Log message for tag
      * @return Array      Array of recognized groups
      */
@@ -198,6 +272,8 @@ class Changelog
             }
         }
 
-        return 'Changed'; //default value to return
+        return self::defaultGroup;
     }
 }
+
+
