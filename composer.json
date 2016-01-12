@@ -1,6 +1,8 @@
 {
-    "name": "Ankalagon/KeepAChangelog",
-    "description": "Git changelog generator compatiblem to keepachangelog.com",
+    "name": "ankalagon/keepachangelog",
+    "type": "library",
+    "description": "Git changelog generator compatible to keepachangelog.com",
+    "keywords": ["changelog"],
     "license": "GPL-3.0",
     "authors": [
         {
@@ -13,6 +15,8 @@
         "kzykhys/git":">=v0.1.2",
     },
     "autoload": {
-        "files": ["class.rest.php", "config.php"]
+        "psr-0": {
+            "KeepAChangelog": "src"
+        }
     }
 }
