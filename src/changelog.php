@@ -24,6 +24,10 @@ class Changelog
         'Merged', // for Merge requests
     );
 
+    /**
+     * Default phrases in groups
+     * @var array
+     */
     private $_defaultGroupsPrefixes = array(
         'Added' => array(
             'Add',
@@ -48,7 +52,7 @@ class Changelog
     );
 
     /**
-     * Default Group
+     * Default Group, used when any other groups are unrecognised
      */
     const defaultGroup = 'Changed';
 
@@ -77,6 +81,13 @@ class Changelog
     private $_dateFormat = 'Y-m-d';
 
     /**
+     * Version on production
+     * @var string
+     */
+    private $_version = '';
+
+    /**
+     * HEAD of repository
      * const
      */
     const HEAD = 'HEAD';
@@ -92,6 +103,10 @@ class Changelog
         $this->setPrefixFor($this->_defaultGroupsPrefixes);
     }
 
+    /**
+     * To generate or nor UNRELEASED section
+     * @param bool|true $generate
+     */
     public function setGenerateUnreleased($generate = true)
     {
         $this->_generateUnreleased = (bool) $generate;
@@ -106,9 +121,22 @@ class Changelog
         $this->_tagPattern = $pattern;
     }
 
+    /**
+     * To change the output date format
+     * @param $pattern
+     */
     public function setDateFormatPattern($pattern)
     {
         $this->_dateFormat = $pattern;
+    }
+
+    /**
+     * To set version on production
+     * @param $version
+     */
+    public function setVersion($version)
+    {
+        $this->_version = trim($version);
     }
 
     /**
@@ -166,9 +194,13 @@ class Changelog
     private function _render(Array $groups, $date, $tag)
     {
         $str = '';
-
         if ($tag == self::HEAD) {
+            if ($groups == false) {
+                return '';
+            }
             $str .= sprintf('## [%s]', 'Unreleased').PHP_EOL;
+        } elseif ($tag == $this->_version) {
+            $str .= sprintf('## [%s] - %s **ON PRODUCTION**', $tag, $date).PHP_EOL;
         } else {
             $str .= sprintf('## [%s] - %s', $tag, $date).PHP_EOL;
         }
@@ -275,5 +307,3 @@ class Changelog
         return self::defaultGroup;
     }
 }
-
-
