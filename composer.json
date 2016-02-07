@@ -12,11 +12,12 @@
     ],
     "require": {
         "php": ">=5.3.0",
-        "kzykhys/git":">=v0.1.2"
+        "kzykhys/git": "dev-master"
     },
     "autoload": {
-        "psr-0": {
-            "KeepAChangelog": "src"
+        "psr-4": {
+            "Ankalagon\\KeepAChangeLog\\": "src/"
         }
     }
+
 }

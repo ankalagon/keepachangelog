@@ -1,6 +1,6 @@
 <?php
 
-namespace Changelog;
+namespace Ankalagon\KeepAChangeLog;
 
 class Changelog
 {
@@ -8,7 +8,7 @@ class Changelog
      * Pattern to recognize tags
      * @var string
      */
-    private $_tagPattern = '[v]?[0-9]{1}.[0-9]{1}.?[0-9]{0,3}';
+    private $_tagPattern = '[v]?[0-9]{1,3}.[0-9]{1,3}.?[0-9]{0,3}';
 
     /**
      * Available groups in changelog
@@ -73,6 +73,12 @@ class Changelog
      * @var bool
      */
     private $_output = false;
+
+    /**
+     * result of processing diffs
+     * @var array
+     */
+    private $_result = array();
 
     /**
      * Date format for release date
@@ -140,6 +146,15 @@ class Changelog
     }
 
     /**
+     * Get version on production
+     * @return string
+     */
+    public function getVersion()
+    {
+        return $this->_version;
+    }
+
+    /**
      * Set prefix for changes according to: http://keepachangelog.com/ (CASE SENSITIVE IS IMPORTANT)
      * @param Array $prefix
      */
@@ -158,7 +173,7 @@ class Changelog
         }
     }
 
-    public function generate()
+    public function getRawData()
     {
         $newTag = '';
         foreach ($this->_getTags() as $tag) {
@@ -170,55 +185,17 @@ class Changelog
             if ($tag != $newTag) {
                 $log = $this->_git->log($tag.'..'.$newTag, '', array('limit' => 1000));
 
-                $this->_output .= $this->_render(
-                    $this->_getGroups($log),
-                    $this->_getTime($log),
-                    $newTag
+                $this->_result[$newTag] =array(
+                    'groups' => $this->_getGroups($log),
+                    'time' => $this->_getTime($log)
                 );
             }
 
             $newTag = $tag;
         }
 
-        return $this->_output;
+        return $this->_result;
     }
-
-
-    /**
-     * Returns one log result
-     * @param  Array $groups  Recognized groups
-     * @param  String $date   Creation date of tag (ie. 2015-07-12)
-     * @param  String $tag    Tag number (ie. 1.2.1)
-     * @return String         Complete log message (for one tag)
-     */
-    private function _render(Array $groups, $date, $tag)
-    {
-        $str = '';
-        if ($tag == self::HEAD) {
-            if ($groups == false) {
-                return '';
-            }
-            $str .= sprintf('## [%s]', 'Unreleased').PHP_EOL;
-        } elseif ($tag == $this->_version) {
-            $str .= sprintf('## [%s] - %s **ON PRODUCTION**', $tag, $date).PHP_EOL;
-        } else {
-            $str .= sprintf('## [%s] - %s', $tag, $date).PHP_EOL;
-        }
-
-        foreach ($groups as $group => $messages) {
-            $str .= sprintf('### %s', $group).PHP_EOL;
-            foreach ($messages as $message) {
-                $str .= sprintf('- %s', $message).PHP_EOL;
-            }
-            $str .= PHP_EOL;
-        }
-
-        $str .= PHP_EOL;
-
-        return $str;
-    }
-
-
 
     /**
      * Recognize creation time of tag
