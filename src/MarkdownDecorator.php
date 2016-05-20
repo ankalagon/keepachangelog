@@ -60,7 +60,7 @@ class MarkdownDecorator implements DecoratorInterface
         foreach ($groups as $group => $messages) {
             $str .= sprintf('### %s', $group).PHP_EOL;
             foreach ($messages as $message) {
-                $str .= sprintf('- %s', $message).PHP_EOL;
+                $str .= sprintf('- %s', $message['message']).PHP_EOL;
             }
             $str .= PHP_EOL;
         }

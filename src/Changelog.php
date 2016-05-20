@@ -69,16 +69,16 @@ class Changelog
     private $_generateUnreleased = false;
 
     /**
-     * Buffered output
-     * @var bool
-     */
-    private $_output = false;
-
-    /**
      * result of processing diffs
      * @var array
      */
     private $_result = array();
+
+    /**
+     * raw result from git log command
+     * @var array
+     */
+    private $_rawResult = array();
 
     /**
      * Date format for release date
@@ -93,10 +93,34 @@ class Changelog
     private $_version = '';
 
     /**
+     * If we should create changelog from beginning (first tag)
+     * @var bool
+     */
+    private $_fromBeginning = true;
+
+    /**
      * HEAD of repository
      * const
      */
     const HEAD = 'HEAD';
+
+    /**
+     * dir in with cache is loaded
+     * @var string
+     */
+    private $_cacheDir = '/tmp/';
+
+    /**
+     * Cache data
+     * @var array
+     */
+    private $_cacheData = [];
+
+    /**
+     * path to repository
+     * @var string
+     */
+    private $_repository = '';
 
     /**
      * Create Changelog Object and set path to git reporitory
@@ -104,9 +128,27 @@ class Changelog
      */
     public function __construct($repository_path)
     {
+        $this->_repository = $repository_path;
+
         $this->_git = new \PHPGit\Git();
-        $this->_git->setRepository($repository_path);
+        $this->_git->setRepository($this->_repository);
         $this->setPrefixFor($this->_defaultGroupsPrefixes);
+        $this->_loadCache();
+    }
+
+    private function _loadCache()
+    {
+        $cacheFile = md5($this->_repository);
+        if (is_file($this->_cacheDir.$cacheFile )) {
+            $tmp = file_get_contents($this->_cacheDir.$cacheFile);
+            $this->_cacheData = json_decode($tmp, true);
+        }
+    }
+
+    private function _saveCache($data)
+    {
+        $cacheFile = md5($this->_repository);
+        file_put_contents($this->_cacheDir.$cacheFile, json_encode($data));
     }
 
     /**
@@ -183,9 +225,10 @@ class Changelog
             }
 
             if ($tag != $newTag) {
-                $log = $this->_git->log($tag.'..'.$newTag, '', array('limit' => 1000));
+                $log = $this->_getDiff($tag, $newTag);
 
-                $this->_result[$newTag] =array(
+                $this->_rawResult[$newTag] = $log;
+                $this->_result[$newTag] = array(
                     'groups' => $this->_getGroups($log),
                     'time' => $this->_getTime($log)
                 );
@@ -194,7 +237,17 @@ class Changelog
             $newTag = $tag;
         }
 
+        $this->_saveCache($this->_rawResult);
         return $this->_result;
+    }
+
+    private function _getDiff($tag, $newTag)
+    {
+        if (isset($this->_cacheData[$newTag])) {
+            return $this->_cacheData[$newTag];
+        }
+
+        return $this->_git->log($tag.'..'.$newTag, '', array('limit' => 1000));
     }
 
     /**
@@ -215,12 +268,15 @@ class Changelog
         return date($this->_dateFormat, $date);
     }
 
+
+
     /**
      * Gets all tags according to pattern and sorts in natural order
      * @return Array  tags
      */
-    private function _getTags()
+    public function _getTags()
     {
+        $this->_tags = [];
         $tags = $this->_git->tag();
         foreach ($tags as $tag) {
             if (preg_match('/^'.$this->_tagPattern.'/', $tag)) {
@@ -255,7 +311,11 @@ class Changelog
             }
 
             $group = $this->_recognizeGroup($message['title']);
-            $data[$group][] = ucfirst($message['title']);
+            $data[$group][] = [
+                'message' => ucfirst($message['title']),
+                'user' => $message['name'],
+                'email' => $message['email']
+            ];
         }
 
         foreach ($data as $key => $value) {

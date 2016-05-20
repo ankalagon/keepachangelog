@@ -1,5 +1,7 @@
 <?php
 
+error_reporting(E_ALL ^ E_STRICT);
+
 if (php_sapi_name() != 'cli') {
     die("This example script can be used only in cli mode. If You want to use it in Your browser feel free to modify it.".PHP_EOL);
 }
@@ -28,6 +30,7 @@ use Ankalagon\KeepAChangeLog\MarkdownDecorator;
 try {
 
     $changelog = new Changelog($argv[1]);
+   // print_r($changelog->_getTags());
 //    $changelog->setGenerateUnreleased();
 //    $changelog->setDateFormatPattern('\R\e\l\e\a\s\e\d Y-m-d');
 //    $changelog->setPrefixFor(array(
