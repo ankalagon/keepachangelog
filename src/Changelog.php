@@ -122,6 +122,13 @@ class Changelog
      */
     private $_repository = '';
 
+
+    /**
+     * set this if You want to retrieve only one tag info
+     * @var string
+     */
+    private $_tagInfo = '';
+
     /**
      * Create Changelog Object and set path to git reporitory
      * @param string $repository_path Path to repository
@@ -237,8 +244,28 @@ class Changelog
             $newTag = $tag;
         }
 
+
+
         $this->_saveCache($this->_rawResult);
+
+        if ($this->_tagInfo) {
+            if (isset($this->_result[$this->_tagInfo]) == false) {
+                throw new \Exception(sprintf('Error - no tag %s', $this->_tagInfo));
+            }
+
+            return [$this->_tagInfo => $this->_result[$this->_tagInfo]];
+        }
+
         return $this->_result;
+    }
+
+    /**
+     * Get one tag info
+     * @param $tag
+     */
+    public function tagInfo($tag)
+    {
+        $this->_tagInfo = $tag;
     }
 
     private function _getDiff($tag, $newTag)
@@ -267,8 +294,6 @@ class Changelog
 
         return date($this->_dateFormat, $date);
     }
-
-
 
     /**
      * Gets all tags according to pattern and sorts in natural order
